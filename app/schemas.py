@@ -23,3 +23,8 @@ class TransactionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class FeedbackCreate(BaseModel):
+    transaction_id: int
+    corrected_account: str
+    reason: Optional[str] = None

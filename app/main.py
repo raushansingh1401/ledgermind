@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from app.classifier import classify_transaction
 from app.database import engine, get_db
 from app.models import Base, Transaction, VendorRule
-from app.schemas import TransactionCreate, TransactionResponse
+from app.schemas import (
+    TransactionCreate,
+    TransactionResponse,
+    FeedbackCreate
+)
+from app.feedback import apply_feedback
 
 Base.metadata.create_all(bind=engine)
 
@@ -45,6 +50,30 @@ def create_transaction(
     db.refresh(db_transaction)
 
     return db_transaction
+
+@app.post("/feedback")
+def submit_feedback(
+    feedback: FeedbackCreate,
+    db: Session = Depends(get_db)
+):
+
+    transaction = apply_feedback(
+        db=db,
+        transaction_id=feedback.transaction_id,
+        corrected_account=feedback.corrected_account,
+        reason=feedback.reason
+    )
+
+    if not transaction:
+        return {
+            "error": "Transaction not found"
+        }
+
+    return {
+        "message": "Feedback applied successfully",
+        "transaction_id": transaction.id,
+        "final_account": transaction.final_account
+    }
 
 @app.get("/seed-rules")
 def seed_rules(db: Session = Depends(get_db)):
