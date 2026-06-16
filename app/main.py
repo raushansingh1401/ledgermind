@@ -31,7 +31,8 @@ def create_transaction(
 
     classification = classify_transaction(
         db=db,
-        vendor=transaction.vendor
+        vendor=transaction.vendor,
+        description=transaction.description
     )
 
     db_transaction = Transaction(

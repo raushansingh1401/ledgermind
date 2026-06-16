@@ -1,6 +1,7 @@
 from google import genai
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 
@@ -14,6 +15,15 @@ def classify_vendor(
     description: str
 ):
 
+    VALID_CATEGORIES = [
+        "Cloud Infrastructure",
+        "SaaS Tools",
+        "Travel Expense",
+        "Meals & Entertainment",
+        "Marketing Expense",
+        "Office Supplies"
+    ]
+
     prompt = f"""
 You are a finance transaction classifier.
 
@@ -23,9 +33,8 @@ Vendor:
 Description:
 {description}
 
-Choose the most likely accounting category.
+Possible accounting categories:
 
-Possible categories:
 - Cloud Infrastructure
 - SaaS Tools
 - Travel Expense
@@ -33,10 +42,16 @@ Possible categories:
 - Marketing Expense
 - Office Supplies
 
-Return only:
-Category:
-Confidence:
-Reason:
+Choose ONLY one category from the list above.
+
+Respond ONLY with valid JSON.
+
+Example:
+{{
+  "category": "SaaS Tools",
+  "confidence": 0.88,
+  "reason": "Vendor appears to be software subscription provider"
+}}
 """
 
     response = client.models.generate_content(
@@ -44,4 +59,21 @@ Reason:
         contents=prompt
     )
 
-    return response.text
+    text = response.text.strip()
+
+    # Remove markdown if Gemini returns ```json ... ```
+    if text.startswith("```json"):
+        print("markdown received")
+        text = text.replace("```json", "")
+        text = text.replace("```", "")
+        text = text.strip()
+
+    try:
+        return json.loads(text)
+
+    except Exception:
+        return {
+            "category": None,
+            "confidence": 0.0,
+            "reason": f"Failed to parse Gemini response: {text}"
+        }
